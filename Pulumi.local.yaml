@@ -1,0 +1,3 @@
+config:
+  project:isMinikube: "false"
+  kubernetes:context: orbstack
