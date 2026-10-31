@@ -23,6 +23,9 @@ frontend = GuestbookWithSidecar(
 p8s_chart = PrometheusOperatorHelmChart("prometheus-operator", allocate_ip_address=True)
 p8s_chart.display_secret()
 
+labels = {"app": "Guestbook", "component": "frontend"}
+frontend.create_pod_monitor("frontend", labels, namespace="default", depends_on=[p8s_chart.chart])
+
 # install Grafana dashboard secret
 
 

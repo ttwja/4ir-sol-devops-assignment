@@ -10,6 +10,7 @@ Connect to your own K8S cluster or the AKS cluster created earlier
 
 Setup pulumi & install the stack
 ```
+pulumi stack init testbook
 pulumi install
 pulumi up
 ```

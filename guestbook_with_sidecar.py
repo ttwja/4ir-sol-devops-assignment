@@ -101,42 +101,36 @@ class GuestbookWithSidecar(ComponentResource):
             ingress = self.service.status.apply(lambda s: s.load_balancer.ingress[0])
             self.ip_address = ingress.apply(lambda i: i.ip or i.hostname or "")
 
-        # create a ServiceMonitor for Prometheus to scrape metrics from the sidecar
-        pod_monitor = create_pod_monitor(
-            name=component_name,
-            app_labels=labels,
-            namespace=namespace
-        )
-
         create_grafana_dashboard_secret(name=component_name, namespace=namespace, app_name=app_name)
         self.register_outputs({})
 
 
-def create_pod_monitor(name: str, app_labels: dict[str, str], namespace: str = "default"):
-# 2. Define the Prometheus PodMonitor CRD
-    pod_monitor = CustomResource(
-        f"{name}-pod-monitor",
-        api_version="monitoring.coreos.com/v1",
-        kind="PodMonitor",
-        metadata=ObjectMetaArgs(
-            name=f"{name}-apache-exporter",
-            namespace=namespace,
-            labels={"release": "prometheus"},  # Adjust based on your Prometheus Operator selector labels
-        ),
-        spec={
-            "selector": {
-                "matchLabels": app_labels
+    def create_pod_monitor(self, name: str, app_labels: dict[str, str], namespace: str = "default", depends_on: list = None):
+    #Define the Prometheus PodMonitor CRD
+        pod_monitor = CustomResource(
+            f"{name}-pod-monitor",
+            api_version="monitoring.coreos.com/v1",
+            kind="PodMonitor",
+            metadata=ObjectMetaArgs(
+                name=f"{name}-apache-exporter",
+                namespace=namespace,
+                labels={"release": "prometheus"},  # Adjust based on your Prometheus Operator selector labels
+            ),
+            spec={
+                "selector": {
+                    "matchLabels": app_labels
+                },
+                "podMetricsEndpoints": [
+                    {
+                        "port": "metrics",
+                        "path": "/metrics",
+                        "interval": "30s",
+                    }
+                ],
             },
-            "podMetricsEndpoints": [
-                {
-                    "port": "metrics",
-                    "path": "/metrics",
-                    "interval": "30s",
-                }
-            ],
-        }
-    )
-    return pod_monitor
+            opts=ResourceOptions(depends_on=depends_on, parent=self) if depends_on else None
+        )
+        return pod_monitor
 
 import json
 def create_grafana_dashboard_secret(name: str, namespace: str = "default", app_name: str = "Guestbook"):
